@@ -1,4 +1,4 @@
-package com.example.advent;
+package com.example.advent.day1;
 
 import java.io.BufferedReader;
 import java.io.IOException;
