@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,11 +16,10 @@ public class Main {
         List<String> lines = readInput();
         List<List<Long>> reports = new ArrayList<>();
         for (String line: lines) {
-            List<Long> report = new ArrayList<>();
-            for (String numStr :line.split(" +")) {
-                long value = Long.parseLong(numStr);
-                report.add(value);
-            }
+            List<Long> report = Arrays.stream(line.split(" +"))
+                    .mapToLong(Long::parseLong)
+                    .boxed()
+                    .toList();
             reports.add(report);
         }
         int okCount = 0;
