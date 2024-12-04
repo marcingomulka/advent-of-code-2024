@@ -1,25 +1,34 @@
 package com.example.advent.day4;
 
+import io.vavr.Tuple2;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.regex.MatchResult;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import static java.lang.Math.abs;
 
 public class Main {
+
     public static final String XMAS = "XMAS";
+    public static final List<Tuple2<Integer, Integer>> DIRECTIONS = List.of(
+            new Tuple2<>(-1, -1),
+            new Tuple2<>(-1, 0),
+            new Tuple2<>(-1, 1),
+            new Tuple2<>(0, -1),
+            new Tuple2<>(1, -1),
+            new Tuple2<>(1, 0),
+            new Tuple2<>(1, 1),
+            new Tuple2<>(0, 1)
+    );
+
     public static void main(String[] args) throws Exception {
         List<String> lines = readInput();
         int maxX = lines.get(0).length();
         int maxY = lines.size();
-        //System.out.println(maxX + "  " + maxY);
         char[][] board = new char[maxX][maxY];
         for (int j = 0; j < maxY; j++) {
             String line = lines.get(j);
@@ -28,94 +37,65 @@ public class Main {
                 board[i][j] = chars[i];
             }
         }
-        //printBoard(maxX, maxY, board);
-        int wordCount = 0;
-        for (int j = 0; j < maxY; j++) {
-            for (int i = 0; i < maxX; i++) {
-                wordCount += checkAllDirections(i, j, board);
-            }
-        }
-        System.out.println("Part1: " + wordCount);
+        int part1WordCount = IntStream.range(0, maxY)
+                .flatMap(j -> IntStream.range(0, maxX)
+                                .map(i -> checkXmas(i, j, board))
+                ).sum();
 
-        int masCount = 0;
-        for (int j = 1; j < maxY - 1; j++) {
-            for (int i = 1; i < maxX - 1; i++) {
-                if (board[i][j] == 'A') {
-                    masCount += checkMas(i, j, board);
-                }
-            }
-        }
-        System.out.println("Part2: " + masCount);
+        System.out.println("Part1: " + part1WordCount);
+
+        long part2WordCount = IntStream.range(1, maxY - 1)
+                .flatMap(j -> IntStream.range(1, maxX - 1)
+                        .filter(i -> board[i][j] == 'A' && checkMas(i, j, board))
+                ).count();
+
+        System.out.println("Part2: " + part2WordCount);
     }
 
-    private static int checkMas(int i, int j, char[][] board) {
-        if(board[i - 1][j - 1] == 'M'
-                && board [i + 1][j - 1] == 'M'
-                && board [i - 1][j + 1] == 'S'
-                && board [i + 1][j + 1] == 'S')
-            return 1;
-        if(board[i - 1][j - 1] == 'M'
-                && board [i + 1][j - 1] == 'S'
-                && board [i - 1][j + 1] == 'M'
-                && board [i + 1][j + 1] == 'S')
-            return 1;
-        if(board[i - 1][j - 1] == 'S'
-                && board [i + 1][j - 1] == 'M'
-                && board [i - 1][j + 1] == 'S'
-                && board [i + 1][j + 1] == 'M')
-            return 1;
-        if(board[i - 1][j - 1] == 'S'
-                && board [i + 1][j - 1] == 'S'
-                && board [i - 1][j + 1] == 'M'
-                && board [i + 1][j + 1] == 'M')
-            return 1;
-
-        return  0;
+    private static boolean checkMas(int i, int j, char[][] board) {
+        char topLeft = board[i - 1][j - 1];
+        char bottomLeft = board[i + 1][j - 1];
+        char topRight = board[i - 1][j + 1];
+        char bottomRight = board[i + 1][j + 1];
+        char[] sequence = new char[] {topLeft, topRight, bottomLeft, bottomRight};
+        return Arrays.equals(sequence, "MMSS".toCharArray())
+                || Arrays.equals(sequence, "MSMS".toCharArray())
+                || Arrays.equals(sequence, "SMSM".toCharArray())
+                || Arrays.equals(sequence, "SSMM".toCharArray());
     }
 
-    private static int checkAllDirections(int i, int j, char[][] board) {
-        List<Pair<Integer>> directions = List.of(
-                new Pair(-1, -1),
-                new Pair(-1, 0),
-                new Pair(-1, 1),
-                new Pair(0, -1),
-                new Pair(1, -1),
-                new Pair(1, 0),
-                new Pair(1, 1),
-                new Pair(0, 1)
-        );
+    private static int checkXmas(int i, int j, char[][] board) {
         int sumDirs = 0;
-        for (Pair<Integer> direction : directions) {
-            if (board[i][j] == XMAS.charAt(0)) {
-                int count = checkXmas(i, j, board, direction, 1);
-                sumDirs += count;
+        for (Tuple2<Integer, Integer> direction : DIRECTIONS) {
+            if (board[i][j] == XMAS.charAt(0) && checkDirection(i, j, board, direction, 1)) {
+                sumDirs++;
             }
         }
         return sumDirs;
     }
 
-    private static int checkXmas(int i, int j, char[][] board, Pair<Integer> direction, int pos) {
-        int x = direction.first;
-        int y = direction.second;
+    private static boolean checkDirection(int i, int j, char[][] board, Tuple2<Integer, Integer> direction, int pos) {
+        i += direction._1();;
+        j += direction._2();
         if (pos == XMAS.length()) {
-            //System.out.println(i + ", " + j);
-            return 1;
+            return true;
         }
-        if (i + x >= 0 && i + x < board[0].length && j + y >= 0 && j + y < board.length) {
-            if (pos < XMAS.length() && board[i + x][j + y] == XMAS.charAt(pos) ) {
-                return checkXmas(i + x, j + y, board, direction, pos + 1);
+        if (i >= 0 && i < board[0].length && j >= 0 && j < board.length) {
+            if (pos < XMAS.length() && board[i][j] == XMAS.charAt(pos) ) {
+                return checkDirection(i, j, board, direction, pos + 1);
             }
         }
-        return 0;
+        return false;
     }
 
     private static void printBoard(int maxX, int maxY, char[][] board) {
-        for (int j = 0; j < maxY; j++) {
-            for (int i = 0; i < maxX; i++) {
-                System.out.print(board[i][j]);
-            }
-            System.out.println();
-        }
+        IntStream.range(0, maxY)
+                .forEach(j -> {
+                    String row = IntStream.range(0, maxX)
+                            .mapToObj(i -> String.valueOf(board[i][j]))
+                            .collect(Collectors.joining());
+                    System.out.println(row);
+                });
     }
 
     private static List<String> readInput() throws IOException {
