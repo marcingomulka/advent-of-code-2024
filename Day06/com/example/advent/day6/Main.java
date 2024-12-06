@@ -53,7 +53,7 @@ public class Main {
         }
         char[][] copy = Arrays.stream(board).map(char[]::clone).toArray(char[][]::new);
         char guardChar = '^';
-        isTripLooped(copy, guard, guardChar);
+        trip(copy, guard, guardChar);
         System.out.println("Part1 " + recorded.size());
         recordPath = false;
 
@@ -61,14 +61,14 @@ public class Main {
         for (Coord element : recorded) {
             copy = Arrays.stream(board).map(char[]::clone).toArray(char[][]::new);
             copy[element.x()][element.y()] = '#';
-            if (isTripLooped(copy, guard, guardChar)) {
+            if (trip(copy, guard, guardChar)) {
                 part2Count++;
             }
         }
         System.out.println("Part2 "+ part2Count);
     }
 
-    private static boolean isTripLooped(char[][] board, Coord guard, char guardChar) {
+    private static boolean trip(char[][] board, Coord guard, char guardChar) {
         Coord dir = directions.get(guardChar);
         char dirChar = trace.get(guardChar);
         board[guard.x()][guard.y()] = dirChar;
