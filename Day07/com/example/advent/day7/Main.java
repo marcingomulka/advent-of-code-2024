@@ -1,5 +1,7 @@
 package com.example.advent.day7;
 
+import com.google.common.base.Splitter;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -14,20 +16,22 @@ public class Main {
     private static final List<String> operators = List.of("+", "*");
 
     private static final List<String> operatorsPart2 = List.of("+", "*", "||");
+
     public static void main(String[] args) throws Exception {
         List<String> lines = readInput();
+
         List<Long> results = new ArrayList<>();
         List<List<Long>> argList = new ArrayList<>();
         for (String line: lines) {
             String [] eqStr = line.split(":");
             long result = Long.parseLong(eqStr[0]);
             results.add(result);
-            String[] argsStr = eqStr[1].trim().split(" +");
-            argList.add(Arrays.stream(argsStr)
+            argList.add(Arrays.stream(eqStr[1].trim().split(" +"))
                     .mapToLong(Long::parseLong)
                     .boxed()
                     .toList());
         }
+
         long sumPart1 = 0L;
         long sumPart2 = 0L;
         for (int i = 0; i < results.size(); i++) {
