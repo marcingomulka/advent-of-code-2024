@@ -1,6 +1,5 @@
 package com.example.advent.day9;
 
-import javax.swing.text.html.Option;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -8,19 +7,41 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 
 public class Main {
 
-    static class File {
+    static class Block {
         int id;
         int len;
-        Optional<File> prev = Optional.empty();
-        Optional<File> next = Optional.empty();
-        public File(int id, int len) {
+        Optional<Block> prev = Optional.empty();
+        Optional<Block> next = Optional.empty();
+        public Block(int id, int len) {
             this.id = id;
             this.len = len;
         }
+        public void replaceWith(Block newBlock) {
+            newBlock.next = this.next;
+            newBlock.prev = this.prev;
+            this.prev.ifPresent(p -> p.next = Optional.of(newBlock));
+            this.next.ifPresent(p -> p.prev = Optional.of(newBlock));
+        }
+
+        public void insertBefore(Block newBlock) {
+            newBlock.prev = this.prev;
+            this.prev.ifPresent(p -> p.next = Optional.of(newBlock));
+            newBlock.next = Optional.of(this);
+            this.prev = Optional.of(newBlock);
+        }
+
+        public void removeNext() {
+            if (this.next.isPresent()) {
+                this.next.get().next.ifPresent(p -> p.prev = Optional.of(this));
+                this.next = this.next.get().next;
+            }
+        }
+
         @Override
         public String toString() {
             return "(" +
@@ -28,49 +49,58 @@ public class Main {
                     "," + len +
                     ')';
         }
-
-        public Optional<File> getNext() {
-            return next;
-        }
-
-        public Optional<File> getPrev() {
-            return prev;
-        }
     }
     public static void main(String[] args) throws Exception {
         List<String> lines = readInput();
         String input = lines.get(0);
 
-        List<Integer> disk = new ArrayList<>();
-        File diskPart2 = null;
-        File diskPart2Last = null;
-        File curr = null;
+        List<Integer> diskPart1 = new ArrayList<>();
+        Block diskPart2 = null;
+        Block diskPart2Last;
+        Block pointer = null;
         int pos = 0;
         for (char digit: input.toCharArray()) {
             int num = Integer.parseInt(String.valueOf(digit));
-            int id = pos%2==0 ? pos/2 : -1;
-            if (num > 0) {
-                File file = new File(id, num);
-                if (curr != null) {
-                    curr.next = Optional.of(file);
-                    file.prev = Optional.of(curr);
-                }
-                if (diskPart2 == null) {
-                    diskPart2 = file;
-                }
-                curr = file;
+            int id = pos % 2 == 0 ? pos / 2 : -1;
+            Block block = new Block(id, num);
+            if (pointer != null) {
+                pointer.next = Optional.of(block);
+                block.prev = Optional.of(pointer);
+            } else {
+                diskPart2 = block;
             }
-            for (int i = 0; i < num; i++) {
-                if (pos % 2 == 0) {
-                    disk.add(pos/2);
-                } else {
-                    disk.add(-1);
-                }
-            }
+            pointer = block;
+            IntStream.range(0, num).forEach(i -> diskPart1.add(id));
             pos++;
         }
-        diskPart2Last = curr;
+        diskPart2Last = pointer;
 
+        defragmentPart1(diskPart1);
+        long resultPart1 = IntStream.range(0, diskPart1.size())
+                .filter(i -> diskPart1.get(i) >= 0)
+                .mapToLong(i -> diskPart1.get(i) * i)
+                .sum();
+        System.out.println("Part1: " + resultPart1);
+
+        defragmentPart2(diskPart2, diskPart2Last);
+        long sumPart2 = 0L;
+        long offset = 0L;
+        Optional<Block> filePointer = Optional.of(diskPart2);
+        while (filePointer.isPresent()) {
+            long offsetVar = offset;
+            Block current = filePointer.get();
+            if (current.id >= 0) {
+                sumPart2 += IntStream.range(0, current.len)
+                        .mapToLong(i -> current.id * (offsetVar + i))
+                        .sum();
+            }
+            offset += current.len;
+            filePointer = current.next;
+        }
+        System.out.println("Part2: " + sumPart2);
+    }
+
+    private static void defragmentPart1(List<Integer> disk) {
         int index = disk.size() -1;
         int start = 0;
         while (index >= 0 && index > start) {
@@ -87,95 +117,61 @@ public class Main {
             }
             index--;
         }
-        long resultPart1 = 0L;
-        for (int i = 0; i < disk.size(); i++) {
-            if (disk.get(i) >= 0) {
-                resultPart1 += disk.get(i) * i;
-            }
-        }
-        System.out.println("Part1: " + resultPart1);
+    }
 
-        Optional<File> files = Optional.of(diskPart2Last);
-        while (files.isPresent()) {
-            File file = files.get();
-            boolean moved = false;
-            if (file.id >= 0) {
-                Optional<File> empties = Optional.of(diskPart2);
-                while (empties.isPresent() && !emptyFits(empties.get(), file) && empties.get().next.isPresent()) {
-                    if (empties.get() == file) {
+    private static void defragmentPart2(Block begin, Block end) {
+        Optional<Block> filesPointer = Optional.of(end);
+        while (filesPointer.isPresent()) {
+            Block block = filesPointer.get();
+            if (block.id >= 0) {
+                Optional<Block> emptyPointer = Optional.of(begin);
+                while (emptyPointer.isPresent() && !fitsToEmpty(emptyPointer.get(), block) && emptyPointer.get().next.isPresent()) {
+                    if (emptyPointer.get() == block) {
+                        //if file to defragment has passed last empty space
                         break;
                     }
-                    empties = empties.get().next;
+                    emptyPointer = emptyPointer.get().next;
                 }
-                if (empties.isPresent() && emptyFits(empties.get(), file) && empties.get() != file) {
-                    File oldFile = new File(-1, file.len);
-                    oldFile.next = file.next;
-                    oldFile.prev = file.prev;
-                    file.prev.ifPresent(p -> p.next = Optional.of(oldFile));
-                    file.next.ifPresent(p -> p.prev = Optional.of(oldFile));
+                if (emptyPointer.isPresent() && fitsToEmpty(emptyPointer.get(), block) && emptyPointer.get() != block) {
+                    Block oldBlock = new Block(-1, block.len);
+                    block.replaceWith(oldBlock);
 
-                    File empty = empties.get();
-
-                    empty.len -= file.len;
-
-                    file.prev = empty.prev;
-                    empty.prev.ifPresent(p -> p.next = Optional.of(file));
+                    Block empty = emptyPointer.get();
+                    empty.len -= block.len;
                     if (empty.len > 0) {
-                        file.next = Optional.of(empty);
-                        empty.prev = Optional.of(file);
+                        empty.insertBefore(block);
                     } else {
-                        file.next = empty.next;
-                        empty.next.ifPresent(p -> p.prev = Optional.of(file));
+                        empty.replaceWith(block);
                     }
-                    files = oldFile.prev;
-                    moved = true;
+                    compactEmptyBlocks(block);
+                    block = oldBlock;
                 }
             }
-            if (!moved) {
-                files = files.get().prev;
-            }
-            compactEmpties(diskPart2);
+            filesPointer = block.prev;
         }
-        System.out.println();
-        long sumPart2 = 0L;
-        long offset = 0L;
-        Optional<File> file = Optional.of(diskPart2);
-        while (file.isPresent()) {
-            File current = file.get();
-            for (int i = 0; i < current.len; i++) {
-                if (current.id >= 0) {
-                    sumPart2 += (offset + i) * current.id;
-                }
-            }
-            offset += current.len;
-            file = current.next;
-        }
-        System.out.println("Part2: " + sumPart2);
     }
 
-    private static void compactEmpties(File diskPart2) {
-        Optional<File> curr = Optional.of(diskPart2);
+
+    private static boolean fitsToEmpty(Block empty, Block block) {
+        return empty.id == -1 && empty.len >= block.len;
+    }
+
+    private static void compactEmptyBlocks(Block disk) {
+        Optional<Block> curr = Optional.of(disk);
         while (curr.isPresent()) {
-            File file = curr.get();
-            if (file.id == -1 && file.next.isPresent() && file.next.get().id == -1) {
-                file.len += file.next.get().len;
-                file.next.get().next.ifPresent(p -> p.prev = Optional.of(file));
-                file.next = file.next.get().next;
-
+            Block block = curr.get();
+            if (block.id == -1 && block.next.isPresent() && block.next.get().id == -1) {
+                block.len += block.next.get().len;
+                block.removeNext();
             }
-            curr = file.next;
+            curr = block.next;
         }
     }
-
-    private static boolean emptyFits(File empty, File file) {
-        return empty.id == -1 && empty.len >= file.len;
-    }
-
-    private static void printList(File diskPart2) {
-        System.out.print(diskPart2 + ", ");
-        while (diskPart2.next.isPresent()) {
-            diskPart2 = diskPart2.next.get();
-            System.out.print(diskPart2 + ", ");
+    private static void printList(Block disk) {
+        System.out.print(disk + ", ");
+        while (disk.next.isPresent()) {
+            disk = disk.next.get();
+            System.out.print(disk + ", ");
         }
         System.out.println();
     }
