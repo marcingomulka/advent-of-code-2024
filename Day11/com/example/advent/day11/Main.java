@@ -15,7 +15,7 @@ public class Main {
 
         List<Long> numbers = Arrays.stream(line.split(" +"))
                 .map((Long::parseLong))
-                .collect(Collectors.toCollection(LinkedList::new));
+                .toList();
 
         long resultPart1 = blinkTimes(numbers, 25).values()
                 .stream()
@@ -34,23 +34,21 @@ public class Main {
         Map<Long, Long> numCounts = numbers.stream().collect(Collectors.toMap(Function.identity(), v -> 1L));
         for (int i = 0; i < times; i++) {
             Map<Long, Long> newCounts = new HashMap<>();
-            for (Long num : numCounts.keySet()) {
-                Long count = numCounts.get(num);
+            for (Map.Entry<Long, Long> entry : numCounts.entrySet()) {
+                long num = entry.getKey();
+                long count = entry.getValue();
+                String numStr = String.valueOf(num);
+                if (num == 0L) {
+                    newCounts.compute(1L, (k, v) -> v != null ? v + count : count);
 
-                if (count > 0) {
-                    String numStr = String.valueOf(num);
-                    if (num == 0L) {
-                        newCounts.compute(1L, (k, v) -> v != null ? v + count : count);
+                } else if (numStr.length() % 2 == 0) {
+                    long first = Long.parseLong(numStr.substring(0, numStr.length() / 2));
+                    long second = Long.parseLong(numStr.substring(numStr.length() / 2));
+                    newCounts.compute(first, (k, v) -> v != null ? v + count : count);
+                    newCounts.compute(second, (k, v) -> v != null ? v + count : count);
 
-                    } else if (numStr.length() % 2 == 0) {
-                        long first = Long.parseLong(numStr.substring(0, numStr.length() / 2));
-                        long second = Long.parseLong(numStr.substring(numStr.length() / 2));
-                        newCounts.compute(first, (k, v) -> v != null ? v + count : count);
-                        newCounts.compute(second, (k, v) -> v != null ? v + count : count);
-
-                    } else {
-                        newCounts.compute(2024L * num, (k, v) -> v != null ? v + count : count);
-                    }
+                } else {
+                    newCounts.compute(2024L * num, (k, v) -> v != null ? v + count : count);
                 }
             }
             numCounts = newCounts;
