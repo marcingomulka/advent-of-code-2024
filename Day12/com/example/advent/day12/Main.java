@@ -32,8 +32,8 @@ public class Main {
                 int perimeter = 0;
                 Coord start = new Coord(i,j);
                 Set<Tuple2<Coord, Coord>> boundaries = new HashSet<>();
-
                 Queue<Coord> queue = new LinkedList<>();
+
                 if (!visited.contains(start)) {
                     queue.add(start);
                 }
@@ -43,16 +43,16 @@ public class Main {
                         continue;
                     }
                     visited.add(current);
-                    Set<Coord> neighbors = new HashSet<>(getNeighbors(current, board));
+                    Set<Coord> neighbors = getNeighbors(current, board);
                     area++;
                     perimeter += 4 - neighbors.size();
+                    Sets.difference(getAdjacent(current), neighbors).stream()
+                            .map(f -> new Tuple2<>(current, f))
+                            .forEach(boundaries::add);
 
                     neighbors.stream()
                             .filter(n -> !visited.contains(n))
                             .forEach(queue::add);
-                    Sets.difference(getAdjacent(current), neighbors).stream()
-                            .map(f -> new Tuple2(current, f))
-                            .forEach(boundaries::add);
                 }
                 int fenceClustersLength = countClusterLengths(boundaries);
                 int sides = perimeter - fenceClustersLength;
@@ -70,11 +70,9 @@ public class Main {
             for (Tuple2<Coord, Coord> next: perimeterPairs) {
                 if (current.equals(next)) {
                     continue;
-
                 }
-                Set<Coord> adj = getAdjacent(current._1);
-                Set<Coord> adj2 = getAdjacent(current._2);
-                if (adj.contains(next._1) && adj2.contains(next._2)) {
+                if (getAdjacent(current._1).contains(next._1)
+                        && getAdjacent(current._2).contains(next._2)) {
                     result += 1;
                 }
             }
@@ -82,10 +80,10 @@ public class Main {
         return result/2;
     }
 
-    private static List<Coord> getNeighbors(Coord curr, char[][] board) {
-        char value = board[curr._1()][curr._2()];
-        List<Coord> results = new ArrayList<>();
-        for (Coord c : getAdjacent(curr)) {
+    private static Set<Coord> getNeighbors(Coord current, char[][] board) {
+        char value = board[current._1()][current._2()];
+        Set<Coord> results = new HashSet<>();
+        for (Coord c : getAdjacent(current)) {
             if (c._1() >=0 && c._1() < board.length && c._2() >=0 && c._2() < board[0].length) {
                 if (board[c._1()][c._2()] == value) {
                     results.add(c);
@@ -115,8 +113,7 @@ public class Main {
 
         @Override
         public String toString() {
-            return "(" +
-                    "" + first +
+            return "(" + first +
                     "," + second +
                     ')';
         }
