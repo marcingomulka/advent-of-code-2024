@@ -40,9 +40,8 @@ public class Main {
         }
         int tokensSum = 0;
         for (Tuple3<Coord, Coord, Coord> game : games) {
-            Map<Coord, Long> pruned = new HashMap<>();
-            long tokens = playWithMinTokens(game._1, game._2, game._3, new Coord(0, 0), 0, Long.MAX_VALUE, pruned);
-            if (tokens < Integer.MAX_VALUE) {
+            long tokens = playWithMinTokens(game._1, game._2, game._3, new Coord(0, 0), 0, Long.MAX_VALUE, new HashSet<>());
+            if (tokens < Long.MAX_VALUE) {
                 tokensSum += tokens;
             }
         }
@@ -57,29 +56,28 @@ public class Main {
 
     }
 
-    private static long playWithMinTokens(Coord buttonA, Coord buttonB, Coord target, Coord pos, long cost, long minCost, Map<Coord, Long> pruned) {
+    private static long playWithMinTokens(Coord buttonA, Coord buttonB, Coord target, Coord pos, long cost, long minCost, Set<Coord> pruned) {
         if (pos.equals(target)) {
             return cost;
-        } else if (pruned.containsKey(pos) && pruned.get(pos) >= minCost) {
+        } else if (pruned.contains(pos)) {
             return Long.MAX_VALUE;
         } else if (pos._1() > target._1() || pos._2() > target._2()) {
             return Long.MAX_VALUE;
         } else if (cost >= minCost) {
-            pruned.put(pos, cost);
+            pruned.add(pos);
             return Long.MAX_VALUE;
         } else {
-            long currMin = minCost;
             List<Coord> options = List.of(buttonA, buttonB);
             for (Coord c : options) {
                 int unitCost = c.equals(buttonA) ? 3 : 1;
-                long calcCost = playWithMinTokens(buttonA, buttonB, target, pos.plus(c), cost + unitCost, currMin, pruned);
-                if (calcCost < currMin) {
-                    currMin = calcCost;
+                long calcCost = playWithMinTokens(buttonA, buttonB, target, pos.plus(c), cost + unitCost, minCost, pruned);
+                if (calcCost < minCost) {
+                    minCost = calcCost;
                 } else {
-                    pruned.put(pos, calcCost);
+                    pruned.add(pos);
                 }
             }
-            return currMin;
+            return minCost;
         }
     }
 
